@@ -90,10 +90,10 @@ def imputeWithMICE():
 
 # Escalamiento
 
-def standardScaler(X):
+def standardScaler(df):
   scaler=StandardScaler()
-  X_scaled=scaler.fit_transform(X)
-  return X_scaled
+  df[df.columns] = scaler.fit_transform(df[df.columns])
+  return df
 
 def minMaxScaler(X):
   minmax_scaler = MinMaxScaler()
@@ -101,9 +101,9 @@ def minMaxScaler(X):
   
 
 # Tratamiento de Outliers
-def lof(X_scaled,df):
+def lof(X):
     lof=LocalOutlierFactor(n_neighbors=3,contamination=0.1)
-    y_pred=lof.fit_predict(X_scaled)
+    y_pred=lof.fit_predict(X)
     novelty_scores=-lof.negative_outlier_factor_
     threshold=np.percentile(novelty_scores, 90)
     predicted_labels=np.where(y_pred==-1,1,0)
@@ -132,15 +132,23 @@ def encodingCategoricasOneHot(X):
     return X_encoded
 
 def encodingLabel(y):
-  label_encoder = LabelEncoder() 
-  y= label_encoder.fit_transform(y) 
+  label_encoder = LabelEncoder()
+  y.iloc[:, 0] = label_encoder.fit_transform(y.iloc[:, 0])
   return y
 
-def tratamientoOutliers(X_scaled,df):
-    anomalias=lof(X_scaled,df)
-    df = df.drop(anomalias)
-    df = df.reset_index(drop=True)
-    return df
+def tratamientoOutliers(X,y):
+  anomalias=lof(X)
+  X = X.drop(anomalias)
+  X = X.reset_index(drop=True)
+  y = y.drop(anomalias)
+  y = y.reset_index(drop=True)
+  return X, y
+
+def svm(X,y):
+    svc=SVC(C=1,kernel='rbf',gamma='auto',probability=True)
+    cv_scores=cross_val_score(svc, X,y,cv=10)
+    print("cv scores ",cv_scores)
+    print("mean cv scores ",cv_scores.mean())
 
 def main():
     
@@ -158,8 +166,9 @@ def main():
     df = imputeWithMode(df) # el dataset recomienda imputar con Media, pero como son categpricas utilizo moda
     #nullAnalysis(df)
 
-    X = df.iloc[:, df.columns != 'Status']
-    y = df.iloc[:, 2]
+    X = df.drop('Status', axis=1)
+    y = df[['Status']]
+
 
     # Encoding
     X = encodingCategoricasOneHot(X)
@@ -167,14 +176,15 @@ def main():
     
     # Escalamiento
       # StandrtScaler
-    X_scaled=standardScaler(X)
+    X=standardScaler(X)
     
       # Minmaxescaler
     #x_scaled=minMaxScaler(X)
     
     
     # Tratamiento de outliers
-    df = tratamientoOutliers(X_scaled,df)
+    X, y = tratamientoOutliers(X,y)
+
 
     # Regresion logistica
 
