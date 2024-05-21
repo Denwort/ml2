@@ -18,7 +18,7 @@ from sklearn.preprocessing import OneHotEncoder
 
 # Cargar el csv
 def load():
-  path="/content/cirrhosis.csv"
+  path="./cirrhosis.csv"
   df=pd.read_csv(path,delimiter=',')
   return df
 
