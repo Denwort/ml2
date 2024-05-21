@@ -93,7 +93,6 @@ def imputeWithMICE():
   pass
 
 # Tratamiento de Outliers
-
 def lof(X_scaled,iris):
     lof=LocalOutlierFactor(n_neighbors=3,contamination=0.1)
     y_pred=lof.fit_predict(X_scaled)
@@ -127,11 +126,6 @@ def encodingCategoricasOneHot(df):
 def main():
     df = load()
 
-    df = df.iloc[1:] # Dropear ID
-
-    X = df.iloc[:, df.columns != 'Status'].values
-    y = df.iloc[:, 2].values
-
     # Analisis exploratorio
     #analisisCategoricas(df)
     #analisisNumericas(df)
@@ -143,8 +137,15 @@ def main():
     #nullAnalysis(df)
 
     # Tratamiento de outliers
+    df = df.iloc[:, df.columns != 'ID'] # Dropear ID
 
+    X = df.iloc[:, df.columns != 'Status']
+    y = df.iloc[:, 2]
+    scaler=StandardScaler()
+    #X_scaled=scaler.fit_transform(X)
+    print(X)
 
+    
     # Encoding
 
     # Escalamiento
