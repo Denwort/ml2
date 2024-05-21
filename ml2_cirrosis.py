@@ -13,8 +13,8 @@ import seaborn as sns
 import numpy as np
 from matplotlib.lines import Line2D
 from sklearn.neighbors import LocalOutlierFactor
-from sklearn.preprocessing import StandardScaler
-from sklearn.preprocessing import OneHotEncoder
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder
 
 # Cargar el csv
 def load():
@@ -93,7 +93,7 @@ def imputeWithMICE():
   pass
 
 # Tratamiento de Outliers
-def lof(X_scaled,iris):
+def lof(X_scaled,df):
     lof=LocalOutlierFactor(n_neighbors=3,contamination=0.1)
     y_pred=lof.fit_predict(X_scaled)
     novelty_scores=-lof.negative_outlier_factor_
@@ -103,28 +103,30 @@ def lof(X_scaled,iris):
     print("indices de las anomalias")
     print(anomaly_indices)
     print("datos clasificados como anomalias")
-    print(iris.iloc[anomaly_indices])
+    print(df.iloc[anomaly_indices])
 
 # Encoding
-def encodingCategoricasOneHot(df):
-  cat_columns = df.select_dtypes(include=['object']).columns.tolist()
-
-  # Inicializa el OneHotEncoder
-  encoder = OneHotEncoder(sparse=False, drop='first')
-
-  # Ajusta y transforma las columnas categóricas
-  encoded_cols = pd.DataFrame(encoder.fit_transform(df[cat_columns]))
-
-  # Añade los nombres de las columnas al DataFrame codificado
-  encoded_cols.columns = encoder.get_feature_names_out(cat_columns)
-
-  # Elimina las columnas originales y concatena las codificadas
-  df = pd.concat([df.drop(columns=cat_columns), encoded_cols], axis=1)
-
-  return df
+def encodingCategoricasOneHot(X):
+    #['age', 'sex', 'cp', 'trestbps', 'chol', 'fbs', 'restecg', 'thalach', 'exang', 'oldpeak', 'slope', 'ca', 'thal', 'num']
+    varCategoricas = X.select_dtypes(exclude=np.number).columns.tolist()
+    #listOrd=['Categorical','Sex','Ascites', 'Hepatomegaly', 'Spiders']
+    listOhe=varCategoricas#['cp','restecg','slope','thal']
+    #ppOrd=OrdinalEncoder()
+    #X[listOrd]=ppOrd.fit_transform(X[listOrd])
+    ohe=OneHotEncoder(sparse_output=False, drop='first')
+    ohe_output=ohe.fit_transform(X[listOhe])
+    ohe_feature_names=ohe.get_feature_names_out(listOhe)
+    ohe_df=pd.DataFrame(ohe_output,columns=ohe_feature_names, index=X.index)
+    X.drop(columns=listOhe,inplace=True)
+    X_encoded=pd.concat([X,ohe_df],axis=1)
+    #print(X_encoded.head())
+    return X_encoded
 
 def main():
+    
     df = load()
+    df = df.iloc[:, df.columns != 'ID'] # Dropear ID
+    
 
     # Analisis exploratorio
     #analisisCategoricas(df)
@@ -136,18 +138,22 @@ def main():
     df = imputeWithMode(df) # el dataset recomienda imputar con Media, pero como son categpricas utilizo moda
     #nullAnalysis(df)
 
-    # Tratamiento de outliers
-    df = df.iloc[:, df.columns != 'ID'] # Dropear ID
-
     X = df.iloc[:, df.columns != 'Status']
     y = df.iloc[:, 2]
-    scaler=StandardScaler()
-    #X_scaled=scaler.fit_transform(X)
-    print(X)
 
-    
     # Encoding
-
+    X = encodingCategoricasOneHot(X)
+    
     # Escalamiento
+      # StandrtScaler
+    scaler=StandardScaler()
+    X_scaled1=scaler.fit_transform(X)
+      # Minmaxescaler
+    minmax_scaler = MinMaxScaler()
+    X_scaled2 = minmax_scaler.fit_transform(X)
+    
+    # Tratamiento de outliers
+    lof(X_scaled1,df)
+
 
 main()
