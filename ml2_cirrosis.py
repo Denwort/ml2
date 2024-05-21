@@ -8,6 +8,21 @@ from sklearn.neighbors import LocalOutlierFactor
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder, LabelEncoder
 
+#logistic
+
+import matplotlib
+from sklearn.linear_model import LogisticRegression, LassoCV
+from sklearn import preprocessing, model_selection, linear_model
+from sklearn.impute import SimpleImputer
+from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.metrics import classification_report,confusion_matrix
+from sklearn.model_selection import cross_val_predict
+from pandas.plotting import scatter_matrix
+from sklearn.metrics import accuracy_score,make_scorer
+from sklearn.linear_model import Lasso
+from sklearn.model_selection import GridSearchCV
+
+
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None) 
 pd.set_option('display.max_colwidth', None)
@@ -142,6 +157,71 @@ def tratamientoOutliers(X_scaled,df):
     df = df.reset_index(drop=True)
     return df
 
+originalclass = []
+predictedclass = []
+
+def classification_report_with_accuracy_score(y_true, y_pred):
+    originalclass.extend(y_true)
+    predictedclass.extend(y_pred)
+    return accuracy_score(y_true, y_pred) 
+
+def logisticR(X,y):
+    X_train, X_test, y_train, y_test = train_test_split(X, y,test_size=0.2)
+    lg=linear_model.LogisticRegression()
+    lg.fit(X_train,y_train)
+    predictions = lg.predict(X_test)
+    
+    
+    cm=confusion_matrix(y_test,predictions)
+    score = lg.score(X_test, y_test)
+    
+    print("cross validation ------------------------")
+    #cv
+    
+    scores=cross_val_score(lg,X,y,cv=10)
+    print("\n")
+    print("Scores y promedio: ")
+    print(scores)
+    print("Accuracy: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2))
+    print("\n")
+    
+    print("Classification Report with the test set")
+    print("\n")
+    print(classification_report(y_test, predictions))
+    print("\n")
+    
+    
+    # Perform cross-validated predictions
+    print("Classification Report")
+    print("\n")
+    predicted_cv = cross_val_predict(lg, X, y, cv=10)
+    #print(predicted_cv)
+
+    # Generate classification report
+    report_cv = classification_report(y, predicted_cv)
+    print(report_cv)  
+    
+    #nested
+    
+    print("Classification Report averaging the results")
+    print("\n")
+    nested=cross_val_score(lg,X,y,cv=10,scoring=make_scorer(classification_report_with_accuracy_score))
+    print(nested)
+    print("\n")
+    print("final scoring")
+    print("\n")
+    print(classification_report(originalclass, predictedclass)) 
+    
+    print("Plot confussion ------------------------")
+    # Plot Confusion Matrix
+    plt.figure(figsize=(8,6))
+    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", xticklabels=['Negative', 'Positive'], yticklabels=['Negative', 'Positive'])
+    plt.xlabel('Predicted Label')
+    plt.ylabel('True Label')
+    plt.title('Confusion Matrix')
+    plt.show()
+
+
 def main():
     
     df = load()
@@ -174,11 +254,20 @@ def main():
     
     
     # Tratamiento de outliers
-    df = tratamientoOutliers(X_scaled,df)
+    #df = tratamientoOutliers(X_scaled,df)
+    #X = df.iloc[:, df.columns != 'Status']
+    #y = df.iloc[:, 2]
+    
+    # volver a hacer el encoding y escalamietno
+     
+    #X = encodingCategoricasOneHot(X)
+    #y = encodingLabel(y)
+    #X_scaled=standardScaler(X)
 
-    # Regresion logistica
+    #Regresion logistica
 
-
+    logisticR(X,y)
+    
     # SVM
 
 
