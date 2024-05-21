@@ -14,7 +14,7 @@ import numpy as np
 from matplotlib.lines import Line2D
 from sklearn.neighbors import LocalOutlierFactor
 from sklearn.preprocessing import StandardScaler
-from sklearn.preprocessing import OneHotEncoder
+from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder
 
 # Cargar el csv
 def load():
@@ -107,30 +107,28 @@ def lof(X_scaled,iris):
     print(iris.iloc[anomaly_indices])
 
 # Encoding
-def encodingCategoricasOneHot(df):
-  cat_columns = df.select_dtypes(include=['object']).columns.tolist()
-
-  # Inicializa el OneHotEncoder
-  encoder = OneHotEncoder(sparse=False, drop='first')
-
-  # Ajusta y transforma las columnas categóricas
-  encoded_cols = pd.DataFrame(encoder.fit_transform(df[cat_columns]))
-
-  # Añade los nombres de las columnas al DataFrame codificado
-  encoded_cols.columns = encoder.get_feature_names_out(cat_columns)
-
-  # Elimina las columnas originales y concatena las codificadas
-  df = pd.concat([df.drop(columns=cat_columns), encoded_cols], axis=1)
-
-  return df
+def encodingCategoricasOneHot(X):
+    #['age', 'sex', 'cp', 'trestbps', 'chol', 'fbs', 'restecg', 'thalach', 'exang', 'oldpeak', 'slope', 'ca', 'thal', 'num']
+    varCategoricas = X.select_dtypes(exclude=np.number).columns.tolist()
+    #listOrd=['Categorical','Sex','Ascites', 'Hepatomegaly', 'Spiders']
+    listOhe=varCategoricas#['cp','restecg','slope','thal']
+    #ppOrd=OrdinalEncoder()
+    #X[listOrd]=ppOrd.fit_transform(X[listOrd])
+    ohe=OneHotEncoder(sparse_output=False, drop='first')
+    ohe_output=ohe.fit_transform(X[listOhe])
+    ohe_feature_names=ohe.get_feature_names_out(listOhe)
+    ohe_df=pd.DataFrame(ohe_output,columns=ohe_feature_names, index=X.index)
+    X.drop(columns=listOhe,inplace=True)
+    X_encoded=pd.concat([X,ohe_df],axis=1)
+    print(X_encoded.head())
+    return X_encoded
 
 def main():
     df = load()
 
     df = df.iloc[1:] # Dropear ID
 
-    X = df.iloc[:, df.columns != 'Status'].values
-    y = df.iloc[:, 2].values
+    
 
     # Analisis exploratorio
     #analisisCategoricas(df)
@@ -142,10 +140,15 @@ def main():
     df = imputeWithMode(df) # el dataset recomienda imputar con Media, pero como son categpricas utilizo moda
     #nullAnalysis(df)
 
+    X = df.iloc[:, df.columns != 'Status']
+    y = df['Status']
+
     # Tratamiento de outliers
+    
 
 
     # Encoding
+    X = encodingCategoricasOneHot(X)
 
     # Escalamiento
 
