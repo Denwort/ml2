@@ -136,6 +136,12 @@ def encodingLabel(y):
   y= label_encoder.fit_transform(y) 
   return y
 
+def tratamientoOutliers(X_scaled,df):
+    anomalias=lof(X_scaled,df)
+    df = df.drop(anomalias)
+    df = df.reset_index(drop=True)
+    return df
+
 def main():
     
     df = load()
@@ -168,11 +174,7 @@ def main():
     
     
     # Tratamiento de outliers
-    anomalias=lof(X_scaled,df)
-    df = df.drop(anomalias)
-    df = df.reset_index(drop=True)
-    print(df)
-
+    df = tratamientoOutliers(X_scaled,df)
 
     # Regresion logistica
 
