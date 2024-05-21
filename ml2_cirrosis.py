@@ -88,6 +88,18 @@ def imputeWithMode(df):
 def imputeWithMICE():
   pass
 
+# Escalamiento
+
+def standardScaler(X):
+  scaler=StandardScaler()
+  X_scaled=scaler.fit_transform(X)
+  return X_scaled
+
+def minMaxScaler(X):
+  minmax_scaler = MinMaxScaler()
+  X_scaled = minmax_scaler.fit_transform(X)
+  
+
 # Tratamiento de Outliers
 def lof(X_scaled,df):
     lof=LocalOutlierFactor(n_neighbors=3,contamination=0.1)
@@ -149,21 +161,17 @@ def main():
     
     # Escalamiento
       # StandrtScaler
-    scaler=StandardScaler()
-    X_scaled1=scaler.fit_transform(X)
+    X_scaled=standardScaler(X)
+    
       # Minmaxescaler
-    minmax_scaler = MinMaxScaler()
-    X_scaled2 = minmax_scaler.fit_transform(X)
+    #x_scaled=minMaxScaler(X)
+    
     
     # Tratamiento de outliers
-    anomalias=lof(X_scaled1,df)
+    anomalias=lof(X_scaled,df)
     df = df.drop(anomalias)
     df = df.reset_index(drop=True)
     print(df)
-
-    
-
-
 
 
     # Regresion logistica
