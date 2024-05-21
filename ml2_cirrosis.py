@@ -7,6 +7,8 @@ from matplotlib.lines import Line2D
 from sklearn.neighbors import LocalOutlierFactor
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder, LabelEncoder
+from sklearn.svm import SVC
+from sklearn.model_selection import cross_val_score,GridSearchCV
 
 #logistic
 
@@ -146,17 +148,18 @@ def encodingCategoricasOneHot(X):
     #print(X_encoded.head())
     return X_encoded
 
-def encodingLabel(y):
+def encodingLabel(y, mapping):
   label_encoder = LabelEncoder()
-  y.iloc[:, 0] = label_encoder.fit_transform(y.iloc[:, 0])
+  label_encoder.classes_ = np.array(list(mapping.keys()))
+  #y.iloc[:, 0] = label_encoder.fit_transform(y.iloc[:, 0])
+  y = label_encoder.fit_transform(y)
   return y
 
 def tratamientoOutliers(X,y):
   anomalias=lof(X)
   X = X.drop(anomalias)
   X = X.reset_index(drop=True)
-  y = y.drop(anomalias)
-  y = y.reset_index(drop=True)
+  y = np.delete(y,anomalias)
   return X, y
 
 def svm(X,y):
@@ -175,7 +178,7 @@ def classification_report_with_accuracy_score(y_true, y_pred):
 
 def logisticR(X,y):
     X_train, X_test, y_train, y_test = train_test_split(X, y,test_size=0.2)
-    lg=linear_model.LogisticRegression()
+    lg=linear_model.LogisticRegression(random_state=123)
     lg.fit(X_train,y_train)
     predictions = lg.predict(X_test)
     
@@ -193,11 +196,12 @@ def logisticR(X,y):
     print("Accuracy: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2))
     print("\n")
     
+    ''''
     print("Classification Report with the test set")
     print("\n")
     print(classification_report(y_test, predictions))
     print("\n")
-    
+    '''
     
     # Perform cross-validated predictions
     print("Classification Report")
@@ -223,7 +227,7 @@ def logisticR(X,y):
     print("Plot confussion ------------------------")
     # Plot Confusion Matrix
     plt.figure(figsize=(8,6))
-    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", xticklabels=['Negative', 'Positive'], yticklabels=['Negative', 'Positive'])
+    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", xticklabels=['D', 'C', 'CL'], yticklabels=['D', 'C', 'CL'])
     plt.xlabel('Predicted Label')
     plt.ylabel('True Label')
     plt.title('Confusion Matrix')
@@ -251,7 +255,7 @@ def main():
 
     # Encoding
     X = encodingCategoricasOneHot(X)
-    y = encodingLabel(y)
+    y = encodingLabel(y, {'D': 0, 'C': 1, 'CL': 2})
     
     # Escalamiento
       # StandrtScaler
@@ -264,13 +268,12 @@ def main():
     # Tratamiento de outliers
     X, y = tratamientoOutliers(X,y)
 
-
     # Regresion logistica
-    logisticR(X,y)
+    #logisticR(X,y)
 
     # SVM
 
-
+    svm(X,y)
 
 
     # CrossValidation para hiperparametros
