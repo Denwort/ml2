@@ -16,6 +16,10 @@ from sklearn.neighbors import LocalOutlierFactor
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder
 
+pd.set_option('display.max_rows', None)
+pd.set_option('display.max_columns', None) 
+pd.set_option('display.max_colwidth', None)
+
 # Cargar el csv
 def load():
   path="./cirrhosis.csv"
@@ -100,10 +104,11 @@ def lof(X_scaled,df):
     threshold=np.percentile(novelty_scores, 90)
     predicted_labels=np.where(y_pred==-1,1,0)
     anomaly_indices=np.where(y_pred==-1)[0]
-    print("indices de las anomalias")
-    print(anomaly_indices)
-    print("datos clasificados como anomalias")
-    print(df.iloc[anomaly_indices])
+    #print("indices de las anomalias")
+    #print(anomaly_indices)
+    #print("datos clasificados como anomalias")
+    #print(df.iloc[anomaly_indices])
+    return anomaly_indices
 
 # Encoding
 def encodingCategoricasOneHot(X):
@@ -153,7 +158,10 @@ def main():
     X_scaled2 = minmax_scaler.fit_transform(X)
     
     # Tratamiento de outliers
-    lof(X_scaled1,df)
+    anomalias=lof(X_scaled1,df)
+    df = df.drop(anomalias)
+    df = df.reset_index(drop=True)
+    print(df)
 
 
 main()
