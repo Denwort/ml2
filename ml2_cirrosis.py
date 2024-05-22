@@ -53,7 +53,7 @@ def analisisCategoricas(df):
   print("Categoricas: ", varCategoricas)
   n_vars = len(varCategoricas)
   n_cols = 3
-  n_rows = (n_vars + n_cols - 1) // n_cols
+  n_rows = (n_vars + n_cols - 1) // n_cols  if  (n_vars + n_cols - 1) // n_cols > 0 else 1
   fig, axis = plt.subplots(n_rows, n_cols, figsize=(20, n_rows * 4))
   index = 0
   for i in range(n_rows):
@@ -73,6 +73,20 @@ def analisisCategoricas(df):
       else:
         axis[i, j].set_visible(False)
   plt.tight_layout()
+  plt.show()
+
+def plotCategorica(datos):
+  valores_unicos, recuentos = np.unique(datos, return_counts=True)
+
+  # Crear el gráfico de barras
+  plt.bar(valores_unicos, recuentos)
+
+  # Agregar etiquetas y título
+  plt.xlabel('Valor')
+  plt.ylabel('Recuento')
+  plt.title('Recuento de valores')
+
+  # Mostrar el gráfico
   plt.show()
 
 # Histograma y diagrama de caja para variables numericas
@@ -280,7 +294,7 @@ def logisticR(X,y):
     print("Plot confussion ------------------------")
     # Plot Confusion Matrix
     plt.figure(figsize=(8,6))
-    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", xticklabels=['D', 'C', 'CL'], yticklabels=['D', 'C', 'CL'])
+    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", xticklabels=['C', 'CL', 'D'], yticklabels=['C', 'CL', 'D'])
     plt.xlabel('Predicted Label')
     plt.ylabel('True Label')
     plt.title('Confusion Matrix')
@@ -305,10 +319,9 @@ def main():
     X = df.drop('Status', axis=1)
     y = df[['Status']]
 
-
     # Encoding
     X = encodingCategoricasOneHot(X)
-    y = encodingLabel(y, {'D': 0, 'C': 1, 'CL': 2})
+    y = encodingLabel(y, {'C': 0, 'CL': 1, 'D': 2})
     
     # Escalamiento
       # StandrtScaler
@@ -326,6 +339,8 @@ def main():
 
     # SVM
 
+    #svc(X,y)
+    #svc_grid_search(X,y)
     tipoCV = 2
     svcCV(tipoCV, X, y)
 
