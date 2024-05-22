@@ -9,6 +9,7 @@ from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder, LabelEncoder
 from sklearn.svm import SVC
 from sklearn.model_selection import cross_val_score,GridSearchCV
+from sklearn.model_selection import KFold,LeaveOneOut,StratifiedKFold
 
 #logistic
 
@@ -112,9 +113,10 @@ def standardScaler(df):
   df[df.columns] = scaler.fit_transform(df[df.columns])
   return df
 
-def minMaxScaler(X):
-  minmax_scaler = MinMaxScaler()
-  X_scaled = minmax_scaler.fit_transform(X)
+def minMaxScaler(df):
+  scaler = MinMaxScaler()
+  df[df.columns] = scaler.fit_transform(df[df.columns])
+  return df
   
 
 # Tratamiento de Outliers
@@ -162,11 +164,62 @@ def tratamientoOutliers(X,y):
   y = np.delete(y,anomalias)
   return X, y
 
-def svm(X,y):
-    svc=SVC(C=1,kernel='rbf',gamma='auto',probability=True)
+def svc(X,y):
+    # Hiperparametros  {'C': 1, 'coef0': 1.0, 'gamma': 'auto', 'kernel': 'sigmoid'} score  0.7821428571428571
+    # Hiperparametros  {'C': 1, 'gamma': 'scale', 'kernel': 'sigmoid'} score  0.7785714285714286
+    # Hiperparametros  {'C': 0.1, 'gamma': 0.1, 'kernel': 'sigmoid'} score  0.7642857142857143
+    svc=SVC(C=1,kernel='sigmoid', gamma='auto', coef0=1.0, probability=True, random_state=123)
     cv_scores=cross_val_score(svc, X,y,cv=10)
     print("cv scores ",cv_scores)
     print("mean cv scores ",cv_scores.mean())
+
+def svc_grid_search(X,y):
+  param_grid = [
+      {'C': [0.01, 0.1, 1, 10, 100, 1000], 'kernel': ['linear']},
+      {'C': [0.01, 0.1, 1, 10, 100, 1000], 'kernel': ['poly'], 'gamma': [1, 0.1, 0.01, 0.001, 0.0001, 'scale', 'auto'], 'degree': [2, 3, 4, 5], 'coef0': [0.0, 0.1, 0.5, 1.0]},
+      {'C': [0.01, 0.1, 1, 10, 100, 1000], 'kernel': ['rbf'], 'gamma': [1, 0.1, 0.01, 0.001, 0.0001, 'scale', 'auto']},
+      {'C': [0.01, 0.1, 1, 10, 100, 1000], 'kernel': ['sigmoid'], 'gamma': [1, 0.1, 0.01, 0.001, 0.0001, 'scale', 'auto'], 'coef0': [0.0, 0.1, 0.5, 1.0]}
+  ]
+  svc=SVC()
+  grid_search=GridSearchCV(estimator=svc, param_grid=param_grid,cv=10, refit = True, verbose=2)
+  grid_search.fit(X,y)
+  
+  print("Hiperparametros ",grid_search.best_params_)
+  print("score ",grid_search.best_score_)
+
+
+originalClassSVC=[]
+predClassSVC=[]
+
+def classification_report_with_acc(y_true,y_pred):
+    originalClassSVC.extend(y_true)
+    predClassSVC.extend(y_pred)
+    acc=accuracy_score(y_true, y_pred)
+    return acc
+
+def svcCV(nCV,X,y):
+    svc=SVC(C=1,kernel='sigmoid', gamma='auto', coef0=1.0, probability=True, random_state=123)
+    if nCV==1:
+        #hold-out cv
+        X_train,X_test,y_train,y_test=train_test_split(X,y,test_size=0.2)
+        svc.fit(X_train, y_train)
+        print("hold out cv ",svc.score(X_train, y_train))
+        #completar para el conjunto de datos de test
+    elif nCV==2:
+        kf=KFold(n_splits=7,shuffle=True,random_state=123)
+        nested=cross_val_score(svc, X,y,cv=kf,scoring=make_scorer(classification_report_with_acc))
+        print(nested)
+        print(classification_report(originalClassSVC,predClassSVC))
+    elif nCV==3:
+        loocv=LeaveOneOut()
+        nested=cross_val_score(svc, X,y,cv=loocv,scoring=make_scorer(classification_report_with_acc))
+        print(nested)
+        print(classification_report(originalClassSVC,predClassSVC))
+    elif nCV==4:
+        strCV=StratifiedKFold(n_splits=10,shuffle=True,random_state=1)
+        nested=cross_val_score(svc, X,y,cv=strCV,scoring=make_scorer(classification_report_with_acc))
+        print(nested)
+        print(classification_report(originalClassSVC,predClassSVC))
 
 originalclass = []
 predictedclass = []
@@ -262,7 +315,7 @@ def main():
     X=standardScaler(X)
     
       # Minmaxescaler
-    #x_scaled=minMaxScaler(X)
+    #X=minMaxScaler(X)
     
     
     # Tratamiento de outliers
@@ -273,7 +326,8 @@ def main():
 
     # SVM
 
-    svm(X,y)
+    tipoCV = 2
+    svcCV(tipoCV, X, y)
 
 
     # CrossValidation para hiperparametros
