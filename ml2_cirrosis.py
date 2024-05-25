@@ -258,7 +258,7 @@ def classification_report_with_acc(y_true,y_pred):
     return acc
 
 def svcCV(nCV,X,y):
-    svc=SVC(C=1,kernel='sigmoid', gamma='auto', coef0=1.0, probability=True, random_state=123)
+    svc=SVC(C=1,kernel='sigmoid', gamma='scale', coef0=0.5, probability=True, random_state=123)
     if nCV==1:
         #hold-out cv
         X_train,X_test,y_train,y_test=train_test_split(X,y,test_size=0.2)
@@ -370,34 +370,15 @@ def logisticCV(nCV, X, y):
         print(classification_report(originalclassLR,predictedclassLR))
   
 # Feature Selection
-def correlation(df, target, threshold):
-  # Plot correlations
-  corr=df.corr()[target].sort_values(ascending=False)[1:]
-  print("correlation")
-  print(corr)
-  abs_corr=abs(corr)
-  print(abs_corr)
-  print("relevant features by corr: ")
-  relevant=abs_corr[abs_corr>threshold]
-  print(relevant)
-  plt.figure(figsize=(20,10))
-  sns.heatmap(df.corr().abs(),annot=True)
 
-def corr_pearson(df, target):
-  print("Coeficientes de correlacion de Pearson con", target, ":")
-  data = df.drop(columns=[target], axis=0)
-  for feature in data.columns:
-    print(feature, ": ", stats.pearsonr(df[feature], df[target]).statistic)
-
+  # Algoritmo forward selection
 def forward_selection(X, y, threshold=0.01):
-    # Crear DataFrame con intercepto
     X_int = pd.DataFrame({'intercept': np.ones(len(X))}).join(X)
     included = ['intercept']
     excluded = list(set(X_int.columns) - set(included))
     best_features = []
     
     current_score = 0.0
-    
     while excluded:
         scores_with_candidates = []
         for feature in excluded:
@@ -423,8 +404,8 @@ def forward_selection(X, y, threshold=0.01):
     
     return included, best_features
 
+  # Algoritmo Recursive Forward Elimination
 def selectFeatures(X,y, n_features):
-  # Recursive Forward Elimination algorithm
   model=LogisticRegression()
   rfe=RFE(model,n_features_to_select=n_features)
   fit=rfe.fit(X, y)
@@ -436,8 +417,10 @@ def main():
     df = df.iloc[:, df.columns != 'ID'] # Dropear ID
     
     # Aplicar feature selection
-    #df = df[['Status', 'Drug', 'N_Days', 'Age', 'Bilirubin', 'Alk_Phos', 'Platelets', 'Prothrombin','Stage', 'Sex', 'Ascites', 'Hepatomegaly']]
-
+    df = df[['Status', 'Drug', 'Age', 'Sex', 'Platelets', 'Tryglicerides', 'Edema']] # Forward selection
+    # Hiperparametros  {'C': 0.01, 'coef0': 1.0, 'degree': 5, 'gamma': 'auto', 'kernel': 'poly'} score  0.645483870967742
+    # xd Recursive Forward Elimination
+    
     # Analisis exploratorio
     #analisisCategoricas(df)
     #analisisNumericas(df)
@@ -457,15 +440,16 @@ def main():
     
     # Escalamiento
     df=standardScaler(df, 'Status')
-    #X=minMaxScaler(X)
+    #df=minMaxScaler(df, 'Status')
     
     # Tratamiento de outliers
     df = tratamientoOutliers(df, 'Status', contamination=0.01, plot=False)
-
-    # Modelos
+    
+    # X,y para los modelos
     X = df.drop('Status',axis=1)
-    y=df['Status']
-    y=y.apply(lambda x:1 if x<2 else 0) # 0:vivo, 1:muerto
+    y = df['Status']
+    # Reduccion a clasificacion binaria
+    #y=y.apply(lambda x:1 if x<2 else 0) # 0:vivo, 1:muerto
 
     # Regresion logistica
     #logisticR(X,y)
@@ -479,10 +463,8 @@ def main():
     #svcCV(nCV=4, X=X, y=y)
 
     # Feature selection
-    #correlation(df, 'Status', 0.3)
-    #corr_pearson(df, 'Status')
-    #print(forward_selection(X, y, 0.001)[1])
-    #selectFeatures(X, y, 10)
+    print(forward_selection(X, y, 0.001)[1])
+    selectFeatures(X, y, 5)
 
     # Reducir de 3 vars a 1
 
