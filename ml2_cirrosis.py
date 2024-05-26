@@ -41,14 +41,14 @@ def load():
 
 # Analisis exploratorio
 # Graficar una variables
-def plotVariable(data):
-  print(data.info())
-  print(data.describe())
-  plt.figure(figsize=(15,5))
-  plt.plot(data['Status'])
-  plt.title('Status.', fontsize=15)
-  plt.ylabel('Status')
-  plt.show()
+def plotTarget(data, target):
+  categoria_counts = data[target].value_counts()
+  categorias_ordenadas = categoria_counts.index
+  plt.figure(figsize=(8, 6))
+  plt.bar(categorias_ordenadas, categoria_counts, color='skyblue')
+  plt.xlabel('Categoría')
+  plt.ylabel('Frecuencia')
+  plt.title('Distribución de Categorías')
 
 # Grafico de barras variables categoricas
 def analisisCategoricas(df):
@@ -125,6 +125,7 @@ def imputeWithMICE():
 
 # Escalamiento
 
+#  Escalamiento con StandardScaler
 def standardScaler(df, target):
   y = df[target]
   X = df.drop(columns=[target])
@@ -134,13 +135,42 @@ def standardScaler(df, target):
   df_final = df_scaled.join(y)
   return df_final
 
+#  Escalamiento con MinMaxScaler
 def minMaxScaler(df):
   scaler = MinMaxScaler()
   df[df.columns] = scaler.fit_transform(df[df.columns])
   return df
   
+# Encoding
+#  Encoding con OneHotEncoder
+def encodingFeatures(df, target):
+    X = df.drop(target, axis=1)
+    #['age', 'sex', 'cp', 'trestbps', 'chol', 'fbs', 'restecg', 'thalach', 'exang', 'oldpeak', 'slope', 'ca', 'thal', 'num']
+    varCategoricas = X.select_dtypes(exclude=np.number).columns.tolist()
+    #listOrd=['Categorical','Sex','Ascites', 'Hepatomegaly', 'Spiders']
+    listOhe=varCategoricas#['cp','restecg','slope','thal']
+    #
+    ppOrd=OrdinalEncoder()
+    #X[listOrd]=ppOrd.fit_transform(X[listOrd])
+    ohe=OneHotEncoder(sparse_output=False, drop='first')
+    ohe_output=ohe.fit_transform(X[listOhe])
+    ohe_feature_names=ohe.get_feature_names_out(listOhe)
+    ohe_df=pd.DataFrame(ohe_output,columns=ohe_feature_names, index=X.index)
+    X.drop(columns=listOhe,inplace=True)
+    X_encoded=pd.concat([X,ohe_df],axis=1)
+    df=pd.concat([X_encoded,df[[target]]],axis=1)
+    #print(X_encoded.head())
+    return df
+
+# Encoding con LabelEncoder
+def encodingLabel(df, target, mapping):
+    label_encoder = LabelEncoder()
+    label_encoder.classes_ = np.array(list(mapping.keys()))
+    df[target] = label_encoder.transform(df[target])
+    return df
 
 # Tratamiento de Outliers
+#  Algoritmo LOF
 def lof(X, contamination, plot):
     lof=LocalOutlierFactor(n_neighbors=3,contamination=contamination)
     y_pred=lof.fit_predict(X)
@@ -156,7 +186,7 @@ def lof(X, contamination, plot):
       plotLOF(X.iloc[:,:].values, novelty_scores, threshold, predicted_labels, y_pred)
     return anomaly_indices 
 
-
+#  Plotear resultados del LOF
 def plotLOF(X,novelty_scores,threshold,predicted_labels,y_pred):
     # Plot histogram of novelty scores
     plt.figure(figsize=(12, 5))
@@ -188,32 +218,7 @@ def plotLOF(X,novelty_scores,threshold,predicted_labels,y_pred):
     plt.tight_layout()
     plt.show()
 
-# Encoding
-def encodingFeatures(df, target):
-    X = df.drop(target, axis=1)
-    #['age', 'sex', 'cp', 'trestbps', 'chol', 'fbs', 'restecg', 'thalach', 'exang', 'oldpeak', 'slope', 'ca', 'thal', 'num']
-    varCategoricas = X.select_dtypes(exclude=np.number).columns.tolist()
-    #listOrd=['Categorical','Sex','Ascites', 'Hepatomegaly', 'Spiders']
-    listOhe=varCategoricas#['cp','restecg','slope','thal']
-    #
-    ppOrd=OrdinalEncoder()
-    #X[listOrd]=ppOrd.fit_transform(X[listOrd])
-    ohe=OneHotEncoder(sparse_output=False, drop='first')
-    ohe_output=ohe.fit_transform(X[listOhe])
-    ohe_feature_names=ohe.get_feature_names_out(listOhe)
-    ohe_df=pd.DataFrame(ohe_output,columns=ohe_feature_names, index=X.index)
-    X.drop(columns=listOhe,inplace=True)
-    X_encoded=pd.concat([X,ohe_df],axis=1)
-    df=pd.concat([X_encoded,df[[target]]],axis=1)
-    #print(X_encoded.head())
-    return df
-
-def encodingLabel(df, target, mapping):
-    label_encoder = LabelEncoder()
-    label_encoder.classes_ = np.array(list(mapping.keys()))
-    df[target] = label_encoder.transform(df[target])
-    return df
-
+#  Descartar outliers segun LOF
 def tratamientoOutliers(df, target, contamination, plot):
   X = df.drop(target, axis=1)
   anomalias=lof(X, contamination, plot)
@@ -221,152 +226,109 @@ def tratamientoOutliers(df, target, contamination, plot):
   df = df.reset_index(drop=True)
   return df
 
-def svc(X,y):
-    # Hiperparametros  {'C': 1, 'coef0': 1.0, 'gamma': 'auto', 'kernel': 'sigmoid'} score  0.7821428571428571
-    # Hiperparametros  {'C': 1, 'gamma': 'scale', 'kernel': 'sigmoid'} score  0.7785714285714286
-    # Hiperparametros  {'C': 0.1, 'gamma': 0.1, 'kernel': 'sigmoid'} score  0.7642857142857143
-    # Con GridSearchCV(cv=StratifiedCV())  Hiperparametros  {'C': 1, 'coef0': 0.5, 'gamma': 'scale', 'kernel': 'sigmoid'} score  0.7892857142857143
-    svc=SVC(C=1,kernel='sigmoid', gamma='auto', coef0=1.0, probability=True, random_state=123)
-    cv_scores=cross_val_score(svc, X,y,cv=10)
-    print("cv scores ",cv_scores)
-    print("mean cv scores ",cv_scores.mean())
+# Logistic Regression
+#  Logistic regression grid search
+def logisticGS(X,y):
+    lg = LogisticRegression(random_state=123, max_iter=1000)
+    skf = StratifiedKFold(n_splits=10,shuffle=True,random_state=1)
+    param_grid = [
+        {'C': [0.01, 0.1, 1, 10], 'penalty': ['l2'], 'solver': ['newton-cg', 'lbfgs', 'sag', 'saga']},
+        {'C': [0.01, 0.1, 1, 10], 'penalty': ['l1'], 'solver': ['liblinear', 'saga']},
+        {'C': [0.01, 0.1, 1, 10], 'penalty': ['elasticnet'], 'solver': ['saga'], 'l1_ratio': [0.5]},
+    ]
+    grid_search = GridSearchCV(estimator=lg, param_grid=param_grid, cv=skf, scoring='f1_weighted', refit = True, verbose=2)
+    grid_search.fit(X, y)
+    print("Hiperparametros ",grid_search.best_params_)
+    print("score ",grid_search.best_score_)
 
-def svc_grid_search(X,y):
-  svc=SVC(random_state=123)
+#  Logistic regression cross-validation metrics
+def logisticCV(X, y):
+    # Logistic regresion
+    X = X.values
+    lg=LogisticRegression(C=0.1, penalty='l1', solver='liblinear', random_state=123)
+    skf=StratifiedKFold(n_splits=10,shuffle=True,random_state=1)
+
+    # Calcular todas las etiquetas
+    true_labels = []
+    predicted_labels = []
+    for train_index, test_index in skf.split(X, y):
+        X_train, X_test = X[train_index], X[test_index]
+        y_train, y_test = y[train_index], y[test_index]
+        lg.fit(X_train, y_train)
+        y_pred = lg.predict(X_test)
+        true_labels.extend(y_test)
+        predicted_labels.extend(y_pred)
+
+    # Reporte de clasificación
+    print("\nReporte de Clasificación:")
+    scores = cross_val_score(lg, X, y, cv=skf, scoring='f1_weighted')
+    f1_weighted = scores.mean()
+    print("F1-SCORE: ", f1_weighted)
+    print(classification_report(true_labels, predicted_labels))
+
+    # Matriz de confusión
+    conf_matrix = confusion_matrix(true_labels, predicted_labels)
+    plt.figure(figsize=(8, 6))
+    sns.heatmap(conf_matrix, annot=True, cmap='Blues', fmt='d', cbar=False,
+                xticklabels=['C', 'CL', 'D'],
+                yticklabels=['C', 'CL', 'D'])
+    plt.xlabel('Predicción')
+    plt.ylabel('Etiqueta Real')
+    plt.title('Matriz de Confusión')
+    plt.show()
+
+# SVC
+#  SVC grid search
+def svcGS(X,y):
+  svc=SVC(probability=True, random_state=123)
   param_grid = [
       {'C': [0.01, 0.1, 1, 10], 'kernel': ['linear']},
       {'C': [0.01, 0.1, 1, 10], 'kernel': ['poly'], 'gamma': [0.1, 0.01, 0.001, 'scale', 'auto'], 'degree': [2, 3, 4, 5], 'coef0': [0.0, 0.1, 0.5, 1.0]},
       {'C': [0.01, 0.1, 1, 10], 'kernel': ['rbf'], 'gamma': [0.1, 0.01, 0.001, 'scale', 'auto']},
       {'C': [0.01, 0.1, 1, 10], 'kernel': ['sigmoid'], 'gamma': [0.1, 0.01, 0.001, 'scale', 'auto'], 'coef0': [0.0, 0.1, 0.5, 1.0]}
   ]
-  cv = StratifiedKFold(n_splits=10,shuffle=True,random_state=123)
-  #kf=KFold(n_splits=10,shuffle=True,random_state=123)
-  grid_search=GridSearchCV(estimator=svc, param_grid=param_grid,cv=cv, scoring=make_scorer(f1_score, average='weighted'), refit = True, verbose=2)
+  skf = StratifiedKFold(n_splits=10,shuffle=True,random_state=1)
+  grid_search=GridSearchCV(estimator=svc, param_grid=param_grid,cv=skf, scoring='f1_weighted', refit = True, verbose=2)
   grid_search.fit(X,y)
   
   print("Hiperparametros ",grid_search.best_params_)
   print("score ",grid_search.best_score_)
 
+#  SVC cross validation metrics
+def svcCV(X,y):
+    # Support Vector Classifier
+    X = X.values
+    svc=SVC(C=0.1,kernel='poly', degree= 2, gamma=0.1, coef0=1.0, probability=True, random_state=123)
+    skf=StratifiedKFold(n_splits=10,shuffle=True,random_state=1)
 
-originalClassSVC=[]
-predClassSVC=[]
-
-def classification_report_with_f1(y_true,y_pred):
-    originalClassSVC.extend(y_true)
-    predClassSVC.extend(y_pred)
-    weighted_f1 = f1_score(y_true, y_pred, average='weighted')
-    return weighted_f1
-
-def svcCV(nCV,X,y):
-    svc=SVC(C=1,kernel='sigmoid', gamma='scale', coef0=0.5, probability=True, random_state=123)
-    if nCV==1:
-        #hold-out cv
-        X_train,X_test,y_train,y_test=train_test_split(X,y,test_size=0.2)
+    # Calcular todas las etiquetas
+    true_labels = []
+    predicted_labels = []
+    for train_index, test_index in skf.split(X, y):
+        X_train, X_test = X[train_index], X[test_index]
+        y_train, y_test = y[train_index], y[test_index]
         svc.fit(X_train, y_train)
-        print("hold out cv ",svc.score(X_test, y_test))
-        #completar para el conjunto de datos de test
-    elif nCV==2:
-        kf=KFold(n_splits=7,shuffle=True,random_state=123)
-        nested=cross_val_score(svc, X,y,cv=kf,scoring=make_scorer(classification_report_with_f1))
-        print(nested)
-        print(classification_report(originalClassSVC,predClassSVC))
-    elif nCV==3:
-        loocv=LeaveOneOut()
-        nested=cross_val_score(svc, X,y,cv=loocv,scoring=make_scorer(classification_report_with_f1))
-        print(nested)
-        print(classification_report(originalClassSVC,predClassSVC))
-    elif nCV==4:
-        strCV=StratifiedKFold(n_splits=10,shuffle=True,random_state=1)
-        nested=cross_val_score(svc, X,y,cv=strCV,scoring=make_scorer(classification_report_with_f1))
-        print(nested)
-        print(classification_report(originalClassSVC,predClassSVC))
+        y_pred = svc.predict(X_test)
+        true_labels.extend(y_test)
+        predicted_labels.extend(y_pred)
 
-originalclassLR = []
-predictedclassLR = []
+    # Reporte de clasificación
+    print("\nReporte de Clasificación:")
+    scores = cross_val_score(svc, X, y, cv=skf, scoring='f1_weighted')
+    f1_weighted = scores.mean()
+    print("F1-SCORE: ", f1_weighted)
+    print(classification_report(true_labels, predicted_labels))
 
-def classification_report_with_accuracy_score(y_true, y_pred):
-    originalclassLR.extend(y_true)
-    predictedclassLR.extend(y_pred)
-    return accuracy_score(y_true, y_pred) 
-
-def logisticR(X,y):
-    # LogisticRegresion simple
-    # Hiperparametros  {'C': 0.1, 'penalty': 'l2', 'solver': 'newton-cg'} score  0.7642857142857143
-    # Con GridSearchCV(cv=StratifiedCV()) Hiperparametros  {'C': 0.1, 'penalty': 'l1', 'solver': 'liblinear'} score  0.7821428571428571
-    lg=LogisticRegression(C=0.1, penalty='l1', solver='liblinear', random_state=123)
-    scores=cross_val_score(lg,X,y,cv=10)
-    print("cv scores: ",scores)
-    print("mean cv scores: ",scores.mean())
-    
-    # Plot Confusion Matrix
-    X_train, X_test, y_train, y_test = train_test_split(X, y,test_size=0.2)
-    lg.fit(X_train,y_train)
-    predictions = lg.predict(X_test)
-    cm=confusion_matrix(y_test,predictions)
-    print("Plot confussion ------------------------")
-    plt.figure(figsize=(8,6))
-    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", xticklabels=['C', 'CL', 'D'], yticklabels=['C', 'CL', 'D'])
-    plt.xlabel('Predicted Label')
-    plt.ylabel('True Label')
-    plt.title('Confusion Matrix')
+    # Matriz de confusión
+    conf_matrix = confusion_matrix(true_labels, predicted_labels)
+    plt.figure(figsize=(8, 6))
+    sns.heatmap(conf_matrix, annot=True, cmap='Blues', fmt='d', cbar=False,
+                xticklabels=['C', 'CL', 'D'],
+                yticklabels=['C', 'CL', 'D'])
+    plt.xlabel('Predicción')
+    plt.ylabel('Etiqueta Real')
+    plt.title('Matriz de Confusión')
     plt.show()
-
-    '''
-    print("Classification Report del subconjunto de pruebas")
-    print(classification_report(y_test, predictions))
-    print("\n")
-    '''
-    
-    '''
-    # Es lo mismo que el de abajo?
-    # Perform cross-validated predictions
-    print("Classification Report")
-    print("\n")
-    predicted_cv = cross_val_predict(lg, X, y, cv=10)
-    #print(predicted_cv)
-    # Generate classification report
-    report_cv = classification_report(y, predicted_cv)
-    print(report_cv)  
-    '''
-
-def logisticGS(X,y):
-    lg = LogisticRegression(random_state=123, max_iter=1000)
-    param_grid = [
-        {'C': [0.01, 0.1, 1, 10], 'penalty': ['l2'], 'solver': ['newton-cg', 'lbfgs', 'sag', 'saga']},
-        {'C': [0.01, 0.1, 1, 10], 'penalty': ['l1'], 'solver': ['liblinear', 'saga']},
-        {'C': [0.01, 0.1, 1, 10], 'penalty': ['elasticnet'], 'solver': ['saga'], 'l1_ratio': [0.5]},
-    ]
-    cv = StratifiedKFold(n_splits=10,shuffle=True,random_state=1)
-    #kf=KFold(n_splits=10,shuffle=True,random_state=123)
-    grid_search = GridSearchCV(estimator=lg, param_grid=param_grid, cv=kf, scoring=make_scorer(f1_score, average='weighted'), refit = True, verbose=2)
-    grid_search.fit(X, y)
-    print("Hiperparametros ",grid_search.best_params_)
-    print("score ",grid_search.best_score_)
-
-def logisticCV(nCV, X, y):
-    #nested
-    lg=LogisticRegression(C=0.1, penalty='l1', solver='liblinear', random_state=123)
-    if nCV==1:
-        #hold-out cv
-        X_train,X_test,y_train,y_test=train_test_split(X,y,test_size=0.2)
-        lg.fit(X_train, y_train)
-        print("hold out cv ",lg.score(X_test, y_test))
-        #completar para el conjunto de datos de test
-    elif nCV==2:
-        kf=KFold(n_splits=7,shuffle=True,random_state=123)
-        nested=cross_val_score(lg, X,y,cv=kf,scoring=make_scorer(classification_report_with_accuracy_score))
-        print(nested)
-        print(classification_report(originalclassLR,predictedclassLR))
-    elif nCV==3:
-        loocv=LeaveOneOut()
-        nested=cross_val_score(lg, X,y,cv=loocv,scoring=make_scorer(classification_report_with_accuracy_score))
-        print(nested)
-        print(classification_report(originalclassLR,predictedclassLR))
-    elif nCV==4:
-        strCV=StratifiedKFold(n_splits=10,shuffle=True,random_state=1)
-        nested=cross_val_score(lg, X,y,cv=strCV,scoring=make_scorer(classification_report_with_accuracy_score))
-        print(nested)
-        print(classification_report(originalclassLR,predictedclassLR))
   
 # Feature Selection
 
@@ -376,31 +338,25 @@ def forward_selection(X, y, threshold=0.01):
     included = ['intercept']
     excluded = list(set(X_int.columns) - set(included))
     best_features = []
-    
     current_score = 0.0
     while excluded:
         scores_with_candidates = []
         for feature in excluded:
             model_features = included + [feature]
             X_subset = X_int[model_features]
-            
             model = LogisticRegression(max_iter=1000, solver='lbfgs', multi_class='multinomial')
             scores = cross_val_score(model, X_subset, y, cv=5, scoring='accuracy')
             mean_score = np.mean(scores)
-            
             scores_with_candidates.append((mean_score, feature))
-        
         scores_with_candidates.sort(reverse=True)
         best_score, best_feature = scores_with_candidates.pop()
-        
         if best_feature is None or best_score <= current_score + threshold:
             break
-        
         included.append(best_feature)
         excluded.remove(best_feature)
         best_features.append((best_feature, best_score))
         current_score = best_score
-    
+    print(best_features)
     return included, best_features
 
   # Algoritmo Recursive Forward Elimination
@@ -419,17 +375,14 @@ def main():
 
     # Forward selection
     #df = df[['Status', 'Drug', 'Age', 'Sex', 'Platelets', 'Tryglicerides', 'Edema']] 
-    # LR: 
-    # SVM: Hiperparametros  {'C': 0.01, 'coef0': 1.0, 'degree': 5, 'gamma': 'auto', 'kernel': 'poly'} score  0.645483870967742
 
     # Recursive Forward Elimination
     #df = df[['Status', 'Drug','N_Days', 'Age', 'Bilirubin', 'Alk_Phos', 'Platelets', 'Prothrombin', 'Stage', 'Sex', 'Ascites', 'Hepatomegaly']]
-    # LR: Hiperparametros  {'C': 1, 'penalty': 'l1', 'solver': 'liblinear'} score  0.7597849462365592
-    # SVM: Hiperparametros  {'C': 0.1, 'kernel': 'linear'} score  0.789032258064516
              
     # Analisis exploratorio
     #analisisCategoricas(df)
     #analisisNumericas(df)
+    #plotTarget(df, 'Status')
 
     # Tratamiento de nulos
     #nullAnalysis(df)
@@ -450,7 +403,7 @@ def main():
     
     # Tratamiento de outliers
     df = tratamientoOutliers(df, 'Status', contamination=0.07, plot=False)
-    
+
     # X,y para los modelos
     X = df.drop('Status',axis=1)
     y = df['Status']
@@ -458,17 +411,15 @@ def main():
     #y=y.apply(lambda x:1 if x<2 else 0) # 0:vivo, 1:muerto
 
     # Regresion logistica
-    #logisticR(X,y)
     logisticGS(X,y) #  {'C': 0.1, 'penalty': 'l1', 'solver': 'liblinear'} 0.7610431382044895
-    #logisticCV(nCV=4, X=X,y=y)
+    #logisticCV(X,y)
 
     # SVM
-    #svc(X,y)
-    #svc_grid_search(X,y) # {'C': 1, 'coef0': 0.5, 'gamma': 'auto', 'kernel': 'sigmoid'}  0.7650882828257377
-    #svcCV(nCV=4, X=X, y=y)
+    #svcGS(X,y) # {'C': 1, 'coef0': 0.5, 'gamma': 'auto', 'kernel': 'sigmoid'}  0.7650882828257377
+    #svcCV(X, y)
 
     # Feature selection
-    #print(forward_selection(X, y, 0.001)[1])
+    #forward_selection(X, y, 0.001)
     #selectFeatures(X, y, 10)
 
     # Reducir de 3 vars a 1
