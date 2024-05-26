@@ -244,6 +244,7 @@ def logisticGS(X,y):
     grid_search.fit(X, y)
     print("Hiperparametros ",grid_search.best_params_)
     print("score ",grid_search.best_score_)
+    return grid_search.best_score_
 
 #  Logistic regression cross-validation metrics
 def logisticCV(X, y):
@@ -297,6 +298,7 @@ def svcGS(X,y):
   
   print("Hiperparametros ",grid_search.best_params_)
   print("score ",grid_search.best_score_)
+  return grid_search.best_score_
 
 #  SVC cross validation metrics
 def svcCV(X,y):
@@ -371,7 +373,6 @@ def selectFeatures(X,y, n_features):
   print("selected features ",X.columns[fit.support_])
 
 def main():
-    
     df = load()
     df = df.iloc[:, df.columns != 'ID'] # Dropear ID
     
@@ -405,8 +406,9 @@ def main():
     df=standardScaler(df, 'Status')
     #df=minMaxScaler(df, 'Status')
     
-    # Tratamiento de outliers
-    df = tratamientoOutliers(df, 'Status', contamination=0.1, plot=False)
+    # Tratamiento de outliers    
+    df = tratamientoOutliers(df, 'Status', contamination=0.07, plot=False)
+    # Scores para cada contamination: {0.01: (0.7529385748343549, 0.755671476341818), 0.02: (0.7481037500987956, 0.7582652366406568), 0.03: (0.7569769742389163, 0.7660536839288097), 0.04: (0.7569284132919021, 0.7682608874586725), 0.05: (0.7404034099580785, 0.7483578008037308), 0.06: (0.7579831799018661, 0.7701487919261696), 0.07: (0.7610431382044895, 0.7580613722316496), 0.08: (0.7568394549583723, 0.7578883795351768), 0.09: (0.7661538212501604, 0.7765954535854773), 0.1: (0.7564646751842682, 0.7656913044677423), 0.11: (0.7575005558324603, 0.7561644671129597), 0.12: (0.7511821364860192, 0.7677429556953138), 0.13: (0.7593468601523964, 0.7589487118930826), 0.14: (0.7498975437501325, 0.7535648511386303), 0.15: (0.7372910894693482, 0.7551022864598621)}
 
     # X,y para los modelos
     X = df.drop('Status',axis=1)
@@ -415,14 +417,12 @@ def main():
     #y=y.apply(lambda x:1 if x<2 else 0) # 0:vivo, 1:muerto
 
     # Regresion logistica
-    #logisticGS(X,y) 
-    #logisticCV(X,y)
-    # Hiperparametros  {'C': 0.1, 'penalty': 'l1', 'solver': 'liblinear'} score  0.7610431382044895
+    #lr = logisticGS(X,y) 
+    logisticCV(X,y)
 
     # SVM
-    svcGS(X,y)
+    #svc = svcGS(X,y)
     #svcCV(X, y)
-    # Hiperparametros  {'C': 1, 'coef0': 0.5, 'gamma': 'auto', 'kernel': 'sigmoid'} score  0.7580613722316496
 
     # Feature selection
     #forward_selection(X, y, 0.001)
