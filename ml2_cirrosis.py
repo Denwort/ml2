@@ -24,7 +24,7 @@ from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.metrics import classification_report,confusion_matrix
 from sklearn.model_selection import cross_val_predict
 from pandas.plotting import scatter_matrix
-from sklearn.metrics import accuracy_score,make_scorer
+from sklearn.metrics import accuracy_score,make_scorer, f1_score
 from sklearn.linear_model import Lasso
 from sklearn.model_selection import GridSearchCV
 
@@ -234,14 +234,14 @@ def svc(X,y):
 def svc_grid_search(X,y):
   svc=SVC(random_state=123)
   param_grid = [
-      {'C': [0.01, 0.1, 1, 10, 100, 1000], 'kernel': ['linear']},
-      {'C': [0.01, 0.1, 1, 10, 100, 1000], 'kernel': ['poly'], 'gamma': [1, 0.1, 0.01, 0.001, 0.0001, 'scale', 'auto'], 'degree': [2, 3, 4, 5], 'coef0': [0.0, 0.1, 0.5, 1.0]},
-      {'C': [0.01, 0.1, 1, 10, 100, 1000], 'kernel': ['rbf'], 'gamma': [1, 0.1, 0.01, 0.001, 0.0001, 'scale', 'auto']},
-      {'C': [0.01, 0.1, 1, 10, 100, 1000], 'kernel': ['sigmoid'], 'gamma': [1, 0.1, 0.01, 0.001, 0.0001, 'scale', 'auto'], 'coef0': [0.0, 0.1, 0.5, 1.0]}
+      {'C': [0.01, 0.1, 1, 10], 'kernel': ['linear']},
+      {'C': [0.01, 0.1, 1, 10], 'kernel': ['poly'], 'gamma': [0.1, 0.01, 0.001, 'scale', 'auto'], 'degree': [2, 3, 4, 5], 'coef0': [0.0, 0.1, 0.5, 1.0]},
+      {'C': [0.01, 0.1, 1, 10], 'kernel': ['rbf'], 'gamma': [0.1, 0.01, 0.001, 'scale', 'auto']},
+      {'C': [0.01, 0.1, 1, 10], 'kernel': ['sigmoid'], 'gamma': [0.1, 0.01, 0.001, 'scale', 'auto'], 'coef0': [0.0, 0.1, 0.5, 1.0]}
   ]
   cv = StratifiedKFold(n_splits=10,shuffle=True,random_state=123)
-  kf=KFold(n_splits=7,shuffle=True,random_state=123)
-  grid_search=GridSearchCV(estimator=svc, param_grid=param_grid,cv=cv, refit = True, verbose=2)
+  #kf=KFold(n_splits=10,shuffle=True,random_state=123)
+  grid_search=GridSearchCV(estimator=svc, param_grid=param_grid,cv=cv, scoring=make_scorer(f1_score, average='weighted'), refit = True, verbose=2)
   grid_search.fit(X,y)
   
   print("Hiperparametros ",grid_search.best_params_)
@@ -251,11 +251,11 @@ def svc_grid_search(X,y):
 originalClassSVC=[]
 predClassSVC=[]
 
-def classification_report_with_acc(y_true,y_pred):
+def classification_report_with_f1(y_true,y_pred):
     originalClassSVC.extend(y_true)
     predClassSVC.extend(y_pred)
-    acc=accuracy_score(y_true, y_pred)
-    return acc
+    weighted_f1 = f1_score(y_true, y_pred, average='weighted')
+    return weighted_f1
 
 def svcCV(nCV,X,y):
     svc=SVC(C=1,kernel='sigmoid', gamma='scale', coef0=0.5, probability=True, random_state=123)
@@ -267,17 +267,17 @@ def svcCV(nCV,X,y):
         #completar para el conjunto de datos de test
     elif nCV==2:
         kf=KFold(n_splits=7,shuffle=True,random_state=123)
-        nested=cross_val_score(svc, X,y,cv=kf,scoring=make_scorer(classification_report_with_acc))
+        nested=cross_val_score(svc, X,y,cv=kf,scoring=make_scorer(classification_report_with_f1))
         print(nested)
         print(classification_report(originalClassSVC,predClassSVC))
     elif nCV==3:
         loocv=LeaveOneOut()
-        nested=cross_val_score(svc, X,y,cv=loocv,scoring=make_scorer(classification_report_with_acc))
+        nested=cross_val_score(svc, X,y,cv=loocv,scoring=make_scorer(classification_report_with_f1))
         print(nested)
         print(classification_report(originalClassSVC,predClassSVC))
     elif nCV==4:
         strCV=StratifiedKFold(n_splits=10,shuffle=True,random_state=1)
-        nested=cross_val_score(svc, X,y,cv=strCV,scoring=make_scorer(classification_report_with_acc))
+        nested=cross_val_score(svc, X,y,cv=strCV,scoring=make_scorer(classification_report_with_f1))
         print(nested)
         print(classification_report(originalClassSVC,predClassSVC))
 
@@ -330,16 +330,15 @@ def logisticR(X,y):
     '''
 
 def logisticGS(X,y):
-    lg = LogisticRegression(random_state=123)
+    lg = LogisticRegression(random_state=123, max_iter=1000)
     param_grid = [
-        {'C': [0.01, 0.1, 1, 10, 100, 1000], 'penalty': ['l2'], 'solver': ['newton-cg', 'lbfgs', 'sag']},
-        {'C': [0.01, 0.1, 1, 10, 100, 1000], 'penalty': ['l1'], 'solver': ['liblinear', 'saga']},
-        {'C': [0.01, 0.1, 1, 10, 100, 1000], 'penalty': ['elasticnet'], 'solver': ['saga'], 'l1_ratio': [0.5]},
-        {'C': [0.01, 0.1, 1, 10, 100, 1000], 'penalty': [None], 'solver': ['newton-cg', 'lbfgs', 'sag', 'saga']}
+        {'C': [0.01, 0.1, 1, 10], 'penalty': ['l2'], 'solver': ['newton-cg', 'lbfgs', 'sag', 'saga']},
+        {'C': [0.01, 0.1, 1, 10], 'penalty': ['l1'], 'solver': ['liblinear', 'saga']},
+        {'C': [0.01, 0.1, 1, 10], 'penalty': ['elasticnet'], 'solver': ['saga'], 'l1_ratio': [0.5]},
     ]
     cv = StratifiedKFold(n_splits=10,shuffle=True,random_state=1)
-    kf=KFold(n_splits=7,shuffle=True,random_state=123)
-    grid_search = GridSearchCV(estimator=lg, param_grid=param_grid, cv=10, refit = True, verbose=2)
+    #kf=KFold(n_splits=10,shuffle=True,random_state=123)
+    grid_search = GridSearchCV(estimator=lg, param_grid=param_grid, cv=kf, scoring=make_scorer(f1_score, average='weighted'), refit = True, verbose=2)
     grid_search.fit(X, y)
     print("Hiperparametros ",grid_search.best_params_)
     print("score ",grid_search.best_score_)
@@ -417,10 +416,17 @@ def main():
     df = df.iloc[:, df.columns != 'ID'] # Dropear ID
     
     # Aplicar feature selection
-    df = df[['Status', 'Drug', 'Age', 'Sex', 'Platelets', 'Tryglicerides', 'Edema']] # Forward selection
-    # Hiperparametros  {'C': 0.01, 'coef0': 1.0, 'degree': 5, 'gamma': 'auto', 'kernel': 'poly'} score  0.645483870967742
-    # xd Recursive Forward Elimination
-    
+
+    # Forward selection
+    #df = df[['Status', 'Drug', 'Age', 'Sex', 'Platelets', 'Tryglicerides', 'Edema']] 
+    # LR: 
+    # SVM: Hiperparametros  {'C': 0.01, 'coef0': 1.0, 'degree': 5, 'gamma': 'auto', 'kernel': 'poly'} score  0.645483870967742
+
+    # Recursive Forward Elimination
+    #df = df[['Status', 'Drug','N_Days', 'Age', 'Bilirubin', 'Alk_Phos', 'Platelets', 'Prothrombin', 'Stage', 'Sex', 'Ascites', 'Hepatomegaly']]
+    # LR: Hiperparametros  {'C': 1, 'penalty': 'l1', 'solver': 'liblinear'} score  0.7597849462365592
+    # SVM: Hiperparametros  {'C': 0.1, 'kernel': 'linear'} score  0.789032258064516
+             
     # Analisis exploratorio
     #analisisCategoricas(df)
     #analisisNumericas(df)
@@ -443,7 +449,7 @@ def main():
     #df=minMaxScaler(df, 'Status')
     
     # Tratamiento de outliers
-    df = tratamientoOutliers(df, 'Status', contamination=0.01, plot=False)
+    df = tratamientoOutliers(df, 'Status', contamination=0.07, plot=False)
     
     # X,y para los modelos
     X = df.drop('Status',axis=1)
@@ -453,18 +459,17 @@ def main():
 
     # Regresion logistica
     #logisticR(X,y)
-    #logisticGS(X,y)
+    logisticGS(X,y) #  {'C': 0.1, 'penalty': 'l1', 'solver': 'liblinear'} 0.7610431382044895
     #logisticCV(nCV=4, X=X,y=y)
 
     # SVM
-
     #svc(X,y)
-    svc_grid_search(X,y)
+    #svc_grid_search(X,y) # {'C': 1, 'coef0': 0.5, 'gamma': 'auto', 'kernel': 'sigmoid'}  0.7650882828257377
     #svcCV(nCV=4, X=X, y=y)
 
     # Feature selection
-    print(forward_selection(X, y, 0.001)[1])
-    selectFeatures(X, y, 5)
+    #print(forward_selection(X, y, 0.001)[1])
+    #selectFeatures(X, y, 10)
 
     # Reducir de 3 vars a 1
 
