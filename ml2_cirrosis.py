@@ -28,7 +28,7 @@ from sklearn.metrics import accuracy_score,make_scorer, f1_score
 from sklearn.linear_model import Lasso
 from sklearn.model_selection import GridSearchCV
 
-
+# Configuracion de pandas para imprimir todo el data set
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None) 
 pd.set_option('display.max_colwidth', None)
@@ -40,6 +40,7 @@ def load():
   return df
 
 # Analisis exploratorio
+
 # Graficar una variables
 def plotTarget(data, target):
   categoria_counts = data[target].value_counts()
@@ -94,6 +95,7 @@ def plotCategorica(datos):
 
   # Mostrar el gráfico
   plt.show()
+  
 
 # Histograma y diagrama de caja para variables numericas
 def analisisNumericas(df):
@@ -149,6 +151,7 @@ def minMaxScaler(df, target):
   return df_final
   
 # Encoding
+
 #  Encoding con OneHotEncoder
 def encodingFeatures(df, target):
     X = df.drop(target, axis=1)
@@ -177,6 +180,7 @@ def encodingLabel(df, target, mapping):
     return df
 
 # Tratamiento de Outliers
+
 #  Algoritmo LOF
 def lof(X, contamination, plot):
     lof=LocalOutlierFactor(n_neighbors=3,contamination=contamination)
@@ -195,7 +199,7 @@ def lof(X, contamination, plot):
 
 #  Plotear resultados del LOF
 def plotLOF(X,novelty_scores,threshold,predicted_labels,y_pred):
-    # Plot histogram of novelty scores
+
     plt.figure(figsize=(12, 5))
     
     plt.subplot(1, 2, 1)
@@ -206,10 +210,8 @@ def plotLOF(X,novelty_scores,threshold,predicted_labels,y_pred):
     plt.axvline(threshold, color='red', linestyle='--', label=f'Threshold: {threshold:.2f}')
     plt.legend()
     
-    # Scatter plot of novelties overlaid on the original data
     plt.subplot(1, 2, 2)
     colors = np.array(['red', 'blue'])
-    #shift the values to the right so [-1,1] converts to [0,2]
     plt.scatter(X[:, 0], X[:, 1], c=colors[(y_pred + 1) // 2], s=50, edgecolors='k')
     plt.title("Local Outlier Factor (LOF)")
     plt.xlabel("Feature 1")
@@ -234,6 +236,7 @@ def tratamientoOutliers(df, target, contamination, plot):
   return df
 
 # Logistic Regression
+
 #  Logistic regression grid search
 def logisticGS(X,y):
     lg = LogisticRegression(random_state=123, max_iter=1000, class_weight='balanced')
@@ -286,6 +289,7 @@ def logisticCV(X, y):
     plt.show()
 
 # SVC
+
 #  SVC grid search
 def svcGS(X,y):
   svc=SVC(probability=True, random_state=123, class_weight='balanced')
@@ -305,7 +309,6 @@ def svcGS(X,y):
 
 #  SVC cross validation metrics
 def svcCV(X,y):
-    # Support Vector Classifier
     X = X.values
     #svc=SVC(C=1,kernel='sigmoid', gamma='auto', coef0=0.5, probability=True, random_state=123, class_weight='balanced')
     svc=SVC(C=0.1,kernel='poly', degree=2, gamma=0.1, coef0=1.0, probability=True, random_state=123, class_weight='balanced')
@@ -389,19 +392,16 @@ def main():
     # Recursive Forward Elimination
     #df = df[['Status', 'Drug','N_Days', 'Age', 'Bilirubin', 'Alk_Phos', 'Platelets', 'Prothrombin', 'Stage', 'Sex', 'Ascites', 'Hepatomegaly']]
              
-    # Analisis exploratorio
+    #Analisis exploratorio
     #analisisCategoricas(df)
     #analisisNumericas(df)
     #plotTarget(df, 'Status')
 
     # Tratamiento de nulos
     #nullAnalysis(df)
-    df = dropNAinDrug(df) # el dataset recomienda dropear los Drug=null
-    df = imputeWithMode(df) # el dataset recomienda imputar con Media, pero como son categpricas utilizo moda
+    df = dropNAinDrug(df)
+    df = imputeWithMode(df) 
     #nullAnalysis(df)
-
-    #X = df.drop('Status', axis=1)
-    #y = df[['Status']]
 
     # Encoding
     df = encodingFeatures(df, 'Status')
@@ -422,17 +422,15 @@ def main():
     #y=y.apply(lambda x:1 if x<2 else 0) # 0:vivo, 1:muerto
 
     # Regresion logistica
-    #lr = logisticGS(X,y) 
-    #logisticCV(X,y)
+    lr = logisticGS(X,y) 
+    logisticCV(X,y)
 
     # SVM
-    #svc = svcGS(X,y)
+    svc = svcGS(X,y)
     svcCV(X, y)
 
     # Feature selection
-    #forward_selection(X, y, 0.001)
-    #selectFeatures(X, y, 10)
-
-    # Reducir de 3 vars a 1
+    forward_selection(X, y, 0.001)
+    selectFeatures(X, y, 10)
 
 main()
