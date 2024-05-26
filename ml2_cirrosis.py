@@ -136,10 +136,14 @@ def standardScaler(df, target):
   return df_final
 
 #  Escalamiento con MinMaxScaler
-def minMaxScaler(df):
+def minMaxScaler(df, target):
+  y = df[target]
+  X = df.drop(columns=[target])
   scaler = MinMaxScaler()
-  df[df.columns] = scaler.fit_transform(df[df.columns])
-  return df
+  df_scaled = scaler.fit_transform(X)
+  df_scaled = pd.DataFrame(df_scaled, columns=X.columns, index=df.index)
+  df_final = df_scaled.join(y)
+  return df_final
   
 # Encoding
 #  Encoding con OneHotEncoder
@@ -402,7 +406,7 @@ def main():
     #df=minMaxScaler(df, 'Status')
     
     # Tratamiento de outliers
-    df = tratamientoOutliers(df, 'Status', contamination=0.07, plot=False)
+    df = tratamientoOutliers(df, 'Status', contamination=0.1, plot=False)
 
     # X,y para los modelos
     X = df.drop('Status',axis=1)
@@ -416,8 +420,8 @@ def main():
     # Hiperparametros  {'C': 0.1, 'penalty': 'l1', 'solver': 'liblinear'} score  0.7610431382044895
 
     # SVM
-    #svcGS(X,y)
-    svcCV(X, y)
+    svcGS(X,y)
+    #svcCV(X, y)
     # Hiperparametros  {'C': 1, 'coef0': 0.5, 'gamma': 'auto', 'kernel': 'sigmoid'} score  0.7580613722316496
 
     # Feature selection
