@@ -43,6 +43,9 @@ def load():
 # Graficar una variables
 def plotTarget(data, target):
   categoria_counts = data[target].value_counts()
+  porcentajes = data[target].value_counts(normalize=True) * 100
+  print("Cantidad: ", categoria_counts)
+  print("Porcentajes: ", porcentajes)
   categorias_ordenadas = categoria_counts.index
   plt.figure(figsize=(8, 6))
   plt.bar(categorias_ordenadas, categoria_counts, color='skyblue')
@@ -233,7 +236,7 @@ def tratamientoOutliers(df, target, contamination, plot):
 # Logistic Regression
 #  Logistic regression grid search
 def logisticGS(X,y):
-    lg = LogisticRegression(random_state=123, max_iter=1000)
+    lg = LogisticRegression(random_state=123, max_iter=1000, class_weight='balanced')
     skf = StratifiedKFold(n_splits=10,shuffle=True,random_state=1)
     param_grid = [
         {'C': [0.01, 0.1, 1, 10], 'penalty': ['l2'], 'solver': ['newton-cg', 'lbfgs', 'sag', 'saga']},
@@ -250,7 +253,7 @@ def logisticGS(X,y):
 def logisticCV(X, y):
     # Logistic regresion
     X = X.values
-    lg=LogisticRegression(C=0.1, penalty='l1', solver='liblinear', random_state=123)
+    lg=LogisticRegression(C=0.1, penalty='l1', solver='liblinear', random_state=123, class_weight='balanced')
     skf=StratifiedKFold(n_splits=10,shuffle=True,random_state=1)
 
     # Calcular todas las etiquetas
@@ -268,8 +271,8 @@ def logisticCV(X, y):
     print("\nReporte de Clasificación:")
     scores = cross_val_score(lg, X, y, cv=skf, scoring='f1_weighted')
     f1_weighted = scores.mean()
-    print("F1-SCORE: ", f1_weighted)
     print(classification_report(true_labels, predicted_labels))
+    print("F1-SCORE: ", f1_weighted)
 
     # Matriz de confusión
     conf_matrix = confusion_matrix(true_labels, predicted_labels)
@@ -285,7 +288,7 @@ def logisticCV(X, y):
 # SVC
 #  SVC grid search
 def svcGS(X,y):
-  svc=SVC(probability=True, random_state=123)
+  svc=SVC(probability=True, random_state=123, class_weight='balanced')
   param_grid = [
       {'C': [0.01, 0.1, 1, 10], 'kernel': ['linear']},
       {'C': [0.01, 0.1, 1, 10], 'kernel': ['poly'], 'gamma': [0.1, 0.01, 0.001, 'scale', 'auto'], 'degree': [2, 3, 4, 5], 'coef0': [0.0, 0.1, 0.5, 1.0]},
@@ -304,7 +307,8 @@ def svcGS(X,y):
 def svcCV(X,y):
     # Support Vector Classifier
     X = X.values
-    svc=SVC(C=1,kernel='sigmoid', gamma='auto', coef0=0.5, probability=True, random_state=123) 
+    #svc=SVC(C=1,kernel='sigmoid', gamma='auto', coef0=0.5, probability=True, random_state=123, class_weight='balanced')
+    svc=SVC(C=0.1,kernel='poly', degree=2, gamma=0.1, coef0=1.0, probability=True, random_state=123, class_weight='balanced')
     skf=StratifiedKFold(n_splits=10,shuffle=True,random_state=1)
 
     # Calcular todas las etiquetas
@@ -322,8 +326,8 @@ def svcCV(X,y):
     print("\nReporte de Clasificación:")
     scores = cross_val_score(svc, X, y, cv=skf, scoring='f1_weighted')
     f1_weighted = scores.mean()
-    print("F1-SCORE: ", f1_weighted)
     print(classification_report(true_labels, predicted_labels))
+    print("F1-SCORE: ", f1_weighted)
 
     # Matriz de confusión
     conf_matrix = confusion_matrix(true_labels, predicted_labels)
@@ -379,6 +383,7 @@ def main():
     # Aplicar feature selection
 
     # Forward selection
+    
     #df = df[['Status', 'Drug', 'Age', 'Sex', 'Platelets', 'Tryglicerides', 'Edema']] 
 
     # Recursive Forward Elimination
@@ -418,11 +423,11 @@ def main():
 
     # Regresion logistica
     #lr = logisticGS(X,y) 
-    logisticCV(X,y)
+    #logisticCV(X,y)
 
     # SVM
     #svc = svcGS(X,y)
-    #svcCV(X, y)
+    svcCV(X, y)
 
     # Feature selection
     #forward_selection(X, y, 0.001)
