@@ -298,7 +298,7 @@ def svcGS(X,y):
 def svcCV(X,y):
     # Support Vector Classifier
     X = X.values
-    svc=SVC(C=0.1,kernel='poly', degree= 2, gamma=0.1, coef0=1.0, probability=True, random_state=123)
+    svc=SVC(C=1,kernel='sigmoid', gamma='auto', coef0=0.5, probability=True, random_state=123) 
     skf=StratifiedKFold(n_splits=10,shuffle=True,random_state=1)
 
     # Calcular todas las etiquetas
@@ -411,12 +411,14 @@ def main():
     #y=y.apply(lambda x:1 if x<2 else 0) # 0:vivo, 1:muerto
 
     # Regresion logistica
-    logisticGS(X,y) #  {'C': 0.1, 'penalty': 'l1', 'solver': 'liblinear'} 0.7610431382044895
+    #logisticGS(X,y) 
     #logisticCV(X,y)
+    # Hiperparametros  {'C': 0.1, 'penalty': 'l1', 'solver': 'liblinear'} score  0.7610431382044895
 
     # SVM
-    #svcGS(X,y) # {'C': 1, 'coef0': 0.5, 'gamma': 'auto', 'kernel': 'sigmoid'}  0.7650882828257377
-    #svcCV(X, y)
+    #svcGS(X,y)
+    svcCV(X, y)
+    # Hiperparametros  {'C': 1, 'coef0': 0.5, 'gamma': 'auto', 'kernel': 'sigmoid'} score  0.7580613722316496
 
     # Feature selection
     #forward_selection(X, y, 0.001)
